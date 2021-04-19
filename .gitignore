@@ -1,3 +1,7 @@
 .idea
 
 node_modules
+
+01-naive-edition/results/**/*.json
+02-with-batches/results/**/*.json
+03-with-promises-queue/results/**/*.json
