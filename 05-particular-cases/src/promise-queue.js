@@ -22,19 +22,38 @@ class PromiseQueue {
      * @private
      */
     this._contrillingDeferred = null;
+
+    this._isEnded = false;
   }
 
   _onItemHandlerFinished = () => {
+    if (this._isEnded) {
+      return;
+    }
+
     if (this._queue.isEnded()) {
       this._waitinFor -= 1;
       if (this._waitinFor === 0) {
+        this._isEnded = true;
         this._contrillingDeferred.resolve();
       }
     } else {
       const nextItem = this._queue.next();
       this._queueItemHandler(nextItem)
-        .then(this._onItemHandlerFinished);
+        .then(
+          this._onItemHandlerFinished,
+          this._onRejection
+        );
     }
+  }
+
+  _onRejection = e => {
+    if (this._isEnded) {
+      return;
+    }
+
+    this._isEnded = true;
+    this._contrillingDeferred.reject(e);
   }
 
   /**
@@ -42,6 +61,10 @@ class PromiseQueue {
    * @return {Promise.<void>}
    */
   run(queueItemHandler) {
+    if (this._isEnded) {
+      return;
+    }
+
     const queue = this._queue;
     if (queue.isEnded()) {
       return Promise.resolve();
@@ -57,7 +80,10 @@ class PromiseQueue {
     while (availableHandlers !== 0 && !queue.isEnded()) {
       const currentQueueItem = queue.next();
       this._queueItemHandler(currentQueueItem)
-        .then(this._onItemHandlerFinished);
+        .then(
+          this._onItemHandlerFinished,
+          this._onRejection
+        );
       availableHandlers--;
     }
 
